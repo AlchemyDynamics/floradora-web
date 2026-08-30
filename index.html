@@ -828,6 +828,16 @@
         </div>
         <div class="toast" id="toast"></div>
 
+        ${cs ? `
+        <details class="section">
+          <summary>Care sheet</summary>
+          <div class="sec-body">
+          ${Object.entries(CARE_ICONS).map(([k, ico]) =>
+            `<div class="care-row"><span class="ico">${ico}</span><span>${esc(cs[k])}</span></div>`).join("")}
+          <div class="care-row"><span class="ico">⏰</span><span>Baseline reminder: every ${cs.wateringIntervalDays} days, adjusted by check-in photos.</span></div>
+          </div>
+        </details>` : ""}
+
         <details class="section">
           <summary>Personality</summary>
           <div class="sec-body"><p>${esc(p.personality)}</p></div>
@@ -846,15 +856,6 @@
         </details>` : ""}
 
         ${cs ? `
-        <details class="section">
-          <summary>Care sheet</summary>
-          <div class="sec-body">
-          ${Object.entries(CARE_ICONS).map(([k, ico]) =>
-            `<div class="care-row"><span class="ico">${ico}</span><span>${esc(cs[k])}</span></div>`).join("")}
-          <div class="care-row"><span class="ico">⏰</span><span>Baseline reminder: every ${cs.wateringIntervalDays} days, adjusted by check-in photos.</span></div>
-          </div>
-        </details>
-
         <details class="section">
           <summary>Watch out for</summary>
           <div class="sec-body"><ul>${cs.commonMistakes.map((m) => `<li>${esc(m)}</li>`).join("")}</ul></div>
