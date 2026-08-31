@@ -856,10 +856,9 @@
           <button class="nav-btn" id="nav-prev" aria-label="Previous plant">‹</button>
           <button class="nav-btn" id="nav-next" aria-label="Next plant">›</button>
         </div>
-        <h2 class="p-name">${esc(p.suggestedName)}<button class="edit-btn" id="edit-name" aria-label="Rename ${esc(p.suggestedName)}">✎</button></h2>
-        <p class="p-species">${esc(p.species.common)} · <em>${esc(p.species.scientific)}</em>${
-          p.species.confidence ? ` · ${Math.round(p.species.confidence * 100)}% sure` : ""
-        }</p>
+        <button class="photo-stage" data-zoom="${imgSrc(p)}" aria-label="See the photo larger">
+          <img src="${imgSrc(p)}" alt="Photo of ${esc(p.suggestedName)}">
+        </button>
         <div class="char-row">
           ${SPRITES[p.slug]
             ? `<button class="char-thumb" data-zoom="${SPRITES[p.slug]}" aria-label="See ${esc(p.suggestedName)}'s character larger">
@@ -871,9 +870,10 @@
             <div class="score">${p.condition.score}/100</div>
           </div>
         </div>
-        <button class="photo-stage" data-zoom="${imgSrc(p)}" aria-label="See the photo larger">
-          <img src="${imgSrc(p)}" alt="Photo of ${esc(p.suggestedName)}">
-        </button>
+        <h2 class="p-name">${esc(p.suggestedName)}<button class="edit-btn" id="edit-name" aria-label="Rename ${esc(p.suggestedName)}">✎</button></h2>
+        <p class="p-species">${esc(p.species.common)} · <em>${esc(p.species.scientific)}</em>${
+          p.species.confidence ? ` · ${Math.round(p.species.confidence * 100)}% sure` : ""
+        }</p>
 
         ${p.awaitingBotanist ? `
         <div class="bubble" style="border-left: 3px solid var(--sun)">🌱 A new arrival,
