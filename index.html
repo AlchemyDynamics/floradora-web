@@ -8,27 +8,43 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Nunito+Sans:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap">
 <style>
   :root {
-    --paper: #f2f5ee;
+    --paper: #edf2eb;
+    --ground-top: #dfe8df;
     --card: #ffffff;
+    --cream: #f9f4e8;
     --ink: #22301f;
-    --ink-soft: #55624f;
+    --ink-soft: #5f695d;
     --leaf: #35734a;
+    --deep: #245132;
+    --panel-a: #274733;
+    --panel-b: #1c3227;
+    --panel-ink: #edf6ee;
+    --panel-soft: #d5e5d9;
+    --panel-kicker: #b7d6c0;
     --bloom: #b0567f;
-    --sun: #b98a2e;
+    --sun: #c69c46;
     --clay: #a9603f;
-    --line: #d8dfd0;
+    --line: #d2dacd;
     --chip-ink: #ffffff;
     --bubble-me: #35734a;
     --brand-red: #b8433a;
-    --shadow: 0 2px 12px rgba(34, 48, 31, 0.08);
+    --shadow: 0 14px 30px rgba(36, 81, 50, 0.08);
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --paper: #161d17;
+      --paper: #141b15;
+      --ground-top: #0f1712;
       --card: #1e2820;
+      --cream: #242e23;
       --ink: #e4ead9;
       --ink-soft: #a3b096;
       --leaf: #7fbd90;
+      --deep: #a5d4b2;
+      --panel-a: #1d3326;
+      --panel-b: #13231a;
+      --panel-ink: #edf6ee;
+      --panel-soft: #cdddd1;
+      --panel-kicker: #9fc4ab;
       --bloom: #d68bab;
       --sun: #d4ad5c;
       --clay: #cf8f6e;
@@ -36,15 +52,23 @@
       --chip-ink: #16201a;
       --bubble-me: #2c5a3d;
       --brand-red: #e0857c;
-      --shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+      --shadow: 0 14px 30px rgba(0, 0, 0, 0.4);
     }
   }
   :root[data-theme="dark"] {
-    --paper: #161d17;
+    --paper: #141b15;
+    --ground-top: #0f1712;
     --card: #1e2820;
+    --cream: #242e23;
     --ink: #e4ead9;
     --ink-soft: #a3b096;
     --leaf: #7fbd90;
+    --deep: #a5d4b2;
+    --panel-a: #1d3326;
+    --panel-b: #13231a;
+    --panel-ink: #edf6ee;
+    --panel-soft: #cdddd1;
+    --panel-kicker: #9fc4ab;
     --bloom: #d68bab;
     --sun: #d4ad5c;
     --clay: #cf8f6e;
@@ -52,12 +76,12 @@
     --chip-ink: #16201a;
     --bubble-me: #2c5a3d;
     --brand-red: #e0857c;
-    --shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+    --shadow: 0 14px 30px rgba(0, 0, 0, 0.4);
   }
 
   * { box-sizing: border-box; }
   body {
-    background: var(--paper);
+    background: linear-gradient(180deg, var(--ground-top) 0, var(--paper) 28%) fixed, var(--paper);
     color: var(--ink);
     font-family: "Nunito Sans", "Segoe UI", system-ui, sans-serif;
     font-size: 16px;
@@ -68,63 +92,164 @@
   }
   .phone { max-width: 430px; margin: 0 auto; }
 
-  header.app { padding: 28px 4px 16px; display: flex; align-items: baseline; gap: 10px; }
+  header.app {
+    margin: 14px 0 16px;
+    padding: 18px;
+    background: linear-gradient(145deg, var(--panel-a), var(--panel-b));
+    border-radius: 28px;
+    box-shadow: var(--shadow);
+    position: relative;
+    overflow: hidden;
+  }
+  header.app::before, header.app::after {
+    content: "";
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.05);
+  }
+  header.app::before { width: 180px; height: 180px; right: -40px; top: -60px; }
+  header.app::after { width: 120px; height: 120px; left: -30px; bottom: -45px; }
+  .app-top { display: flex; align-items: center; gap: 10px; position: relative; z-index: 1; }
   .wordmark {
     font-family: "Fraunces", Georgia, serif;
     font-weight: 700;
-    font-size: 30px;
+    font-size: 28px;
+    line-height: 1;
   }
-  .wordmark .wm-flor { color: var(--leaf); }
-  .wordmark .wm-adora { color: var(--brand-red); }
+  .wordmark .wm-flor { color: #7fbd90; }
+  .wordmark .wm-adora { color: #e0857c; }
   .proto-tag {
     font-family: "JetBrains Mono", monospace;
     font-size: 10.5px;
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: var(--ink-soft);
+    color: var(--panel-kicker);
   }
+  #panel-extra { position: relative; z-index: 1; }
+  #panel-extra .eyebrow {
+    margin-top: 16px;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--panel-kicker);
+    font-weight: 600;
+  }
+  #panel-extra h1 {
+    font-family: "Fraunces", Georgia, serif;
+    font-weight: 700;
+    font-size: 30px;
+    line-height: 1.05;
+    color: var(--panel-ink);
+    margin: 8px 0 0;
+  }
+  .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 16px; }
+  .metric {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 18px;
+    padding: 12px;
+  }
+  .metric b { display: block; font-family: "Fraunces", Georgia, serif; font-weight: 700; font-size: 22px; color: #fff; }
+  .metric span { font-size: 12px; color: var(--panel-soft); }
 
   [hidden] { display: none !important; }
 
-  /* Greenhouse list */
-  .plant-card {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    width: 100%;
-    text-align: left;
+  /* Greenhouse: agenda + conservatory plant cards */
+  button:focus-visible, a:focus-visible { outline: 3px solid var(--sun); outline-offset: 3px; }
+  .agenda {
     background: var(--card);
     border: 1px solid var(--line);
-    border-radius: 14px;
-    padding: 12px 14px;
-    margin-bottom: 10px;
+    border-radius: 26px;
+    padding: 18px;
+    box-shadow: var(--shadow);
+    margin-bottom: 14px;
+  }
+  .agenda-head { display: flex; justify-content: space-between; gap: 12px; align-items: end; }
+  .agenda-head .kicker {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--leaf);
+  }
+  .agenda-head h2 {
+    font-family: "Fraunces", Georgia, serif;
+    font-weight: 600;
+    font-size: 24px;
+    margin: 2px 0 0;
+    line-height: 1.05;
+  }
+  .agenda-list { display: grid; gap: 10px; margin-top: 14px; }
+  .todo {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 10px;
+    align-items: center;
+    padding: 13px;
+    border-radius: 18px;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    font: inherit;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  .todo:hover { border-color: var(--leaf); }
+  .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--sun); box-shadow: 0 0 0 5px rgba(198, 156, 70, 0.18); }
+  .todo-copy b { display: block; }
+  .todo-copy > span { color: var(--ink-soft); font-size: 13px; }
+  .pill {
+    padding: 7px 10px;
+    border-radius: 999px;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    color: var(--deep);
+    font-weight: 800;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .plants { display: grid; gap: 14px; }
+  .plant-card {
+    display: grid;
+    grid-template-columns: 96px 1fr;
+    width: 100%;
+    text-align: left;
+    background: var(--cream);
+    border: 1px solid var(--line);
+    border-radius: 26px;
+    overflow: hidden;
+    padding: 0;
     cursor: pointer;
     box-shadow: var(--shadow);
     font: inherit;
     color: inherit;
   }
   .plant-card:hover { border-color: var(--leaf); }
-  .plant-card:focus-visible, button:focus-visible { outline: 2px solid var(--leaf); outline-offset: 2px; }
-  .thumb {
-    width: 58px; height: 58px; border-radius: 50%;
-    object-fit: cover; flex: none;
-    border: 2px solid var(--line);
+  .thumb { width: 100%; height: 100%; min-height: 118px; object-fit: cover; display: block; }
+  .copy { padding: 14px 16px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .copy .tag {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--leaf);
   }
-  .card-name { font-weight: 800; font-size: 17px; }
-  .card-species { font-size: 13px; color: var(--ink-soft); }
-  .card-main { flex: 1; min-width: 0; }
-  .tier-chip {
-    flex: none;
-    font-size: 12px;
-    font-weight: 800;
-    color: var(--chip-ink);
-    border-radius: 12px;
-    padding: 4px 10px;
+  .card-name { font-family: "Fraunces", Georgia, serif; font-weight: 700; font-size: 23px; line-height: 1.05; }
+  .card-species { font-size: 13px; color: var(--ink-soft); font-style: italic; }
+  .mood-row { margin-top: 8px; display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 800; }
+  .mood-row .face {
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 10px; font-weight: 700;
   }
+  .mood-row .arrow { margin-left: auto; font-size: 20px; color: var(--leaf); }
   .greenhouse-note {
     font-size: 13.5px;
     color: var(--ink-soft);
-    padding: 10px 6px 0;
+    padding: 12px 6px 0;
   }
 
   /* Profile view */
@@ -155,10 +280,9 @@
   .nav-btn:hover { border-color: var(--leaf); }
   .add-btn {
     margin-left: auto;
-    align-self: center;
-    background: var(--leaf);
-    color: var(--chip-ink);
-    border: none;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
     border-radius: 50%;
     width: 40px;
     height: 40px;
@@ -167,9 +291,8 @@
     font-size: 22px;
     line-height: 1;
     cursor: pointer;
-    box-shadow: var(--shadow);
   }
-  .add-btn:hover { filter: brightness(1.07); }
+  .add-btn:hover { background: rgba(255, 255, 255, 0.22); }
   .p-name .edit-btn {
     background: var(--card);
     border: 1px solid var(--line);
@@ -362,7 +485,7 @@
   .section {
     background: var(--card);
     border: 1px solid var(--line);
-    border-radius: 14px;
+    border-radius: 22px;
     padding: 0;
     margin-top: 14px;
     box-shadow: var(--shadow);
@@ -404,7 +527,7 @@
 
   .chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 14px; }
   .chip {
-    background: var(--card);
+    background: var(--cream);
     border: 1px solid var(--line);
     border-radius: 20px;
     padding: 8px 14px;
@@ -453,9 +576,12 @@
 
 <div class="phone">
   <header class="app">
-    <span class="wordmark"><span class="wm-flor">Flor</span><span class="wm-adora">Adora</span></span>
-    <span class="proto-tag">greenhouse · prototype</span>
-    <button class="add-btn" id="fab" aria-label="Adopt a plant">＋</button>
+    <div class="app-top">
+      <span class="wordmark"><span class="wm-flor">Flor</span><span class="wm-adora">Adora</span></span>
+      <span class="proto-tag">greenhouse</span>
+      <button class="add-btn" id="fab" aria-label="Adopt a plant">＋</button>
+    </div>
+    <div id="panel-extra"></div>
   </header>
   <main id="root"></main>
 </div>
@@ -529,6 +655,7 @@
 
   const root = document.getElementById("root");
   const fab = document.getElementById("fab");
+  const panelExtra = document.getElementById("panel-extra");
   let currentSlug = null; // slug of the open profile, null on other views
 
   // Plants adopted from this page live INSIDE the page: adopting republishes
@@ -699,6 +826,7 @@
   function adoptShell(inner) {
     currentSlug = null;
     fab.hidden = true;
+    panelExtra.innerHTML = "";
     player.pause();
     root.innerHTML = `<div class="view">
       <button class="back">← Greenhouse</button>
@@ -818,26 +946,57 @@
   function showGreenhouse() {
     currentSlug = null;
     fab.hidden = false;
+    const hour = new Date().getHours();
+    const greet = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+    const day = new Date().toLocaleDateString(undefined, { weekday: "long" });
+    const thriving = PLANTS.filter((p) => p.condition.score >= 70).length;
+    const needs = PLANTS.filter((p) => p.condition.score < 70);
+    panelExtra.innerHTML = `
+      <div class="eyebrow">${day} · your greenhouse</div>
+      <h1>${greet}. The conservatory is alive.</h1>
+      <div class="metrics">
+        <div class="metric"><b>${PLANTS.length}</b><span>plants growing</span></div>
+        <div class="metric"><b>${thriving}</b><span>thriving</span></div>
+        <div class="metric"><b>${needs.length}</b><span>need you today</span></div>
+      </div>`;
     root.innerHTML = `
       <div class="view">
+        ${needs.length ? `
+        <section class="agenda">
+          <div class="agenda-head">
+            <div><div class="kicker">Start here</div><h2>Today in the greenhouse</h2></div>
+            <span class="pill">${PLANTS.length} living characters</span>
+          </div>
+          <div class="agenda-list">
+            ${needs.map((p) => `
+            <button class="todo" data-slug="${p.slug}">
+              <span class="dot"></span>
+              <span class="todo-copy"><b>${esc(p.suggestedName)} could use some attention.</b>
+              <span>${TIER[p.condition.tier].label} · ${p.condition.score}/100 — tap to visit.</span></span>
+              <span class="pill">Visit</span>
+            </button>`).join("")}
+          </div>
+        </section>` : ""}
+        <section class="plants" aria-label="Your plant collection">
         ${PLANTS.map((p) => {
           const t = TIER[p.condition.tier];
           return `
-            <button class="plant-card" data-slug="${p.slug}">
-              <img class="thumb" src="${imgSrc(p)}" alt="">
-              <span class="card-main">
-                <span class="card-name">${esc(p.suggestedName)}</span><br>
-                <span class="card-species">${esc(p.species.common)}</span>
-              </span>
-              <span class="tier-chip" style="background:${t.color}">${t.label}</span>
-            </button>`;
+          <button class="plant-card" data-slug="${p.slug}">
+            <img class="thumb" src="${imgSrc(p)}" alt="">
+            <span class="copy">
+              <span class="tag">${esc(p.species.common)}</span>
+              <span class="card-name">${esc(p.suggestedName)}</span>
+              <span class="card-species">${esc(p.species.scientific)}</span>
+              <span class="mood-row"><span class="face" style="background:${t.color}">${t.face}</span> ${t.label} · ${p.condition.score} <span class="arrow">→</span></span>
+            </span>
+          </button>`;
         }).join("")}
+        </section>
         <p class="greenhouse-note">Tap a plant to open its profile, then swipe left or
-        right to stroll through the collection. These three were adopted from real
-        photos through the live pipeline — species ID, name, personality, care sheet,
-        and condition all came back from one picture each.</p>
+        right to stroll through the collection. Every profile here came out of the
+        live pipeline from a real photo.</p>
       </div>`;
-    root.querySelectorAll(".plant-card").forEach((b) =>
+    root.querySelectorAll("[data-slug]").forEach((b) =>
       b.addEventListener("click", () => showProfile(b.dataset.slug)));
     window.scrollTo(0, 0);
   }
@@ -848,6 +1007,7 @@
     const cs = p.careSheet;
     currentSlug = slug;
     fab.hidden = true;
+    panelExtra.innerHTML = "";
     root.innerHTML = `
       <div class="view">
         <div class="profile-topnav">
