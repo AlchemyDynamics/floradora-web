@@ -336,8 +336,20 @@
     cursor: pointer;
   }
   .nav-btn:hover { border-color: var(--leaf); }
-  .add-btn {
+  .theme-btn {
     margin-left: auto;
+    background: var(--card);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    border-radius: 50%;
+    width: 42px;
+    height: 42px;
+    font-size: 19px;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .theme-btn:hover { border-color: var(--leaf); }
+  .add-btn {
     background: var(--coral);
     border: none;
     color: #fff;
@@ -637,6 +649,7 @@
   <header class="app">
     <div class="app-top">
       <span class="wordmark">Floradora<svg class="wm-sprig" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 20 C10 14 12 10 13 5" stroke="#3b6a47" stroke-width="1.6" stroke-linecap="round"/><path d="M13 5 C15 6.5 15.5 9 13.5 10.5 C11.8 9 11.8 6.5 13 5 Z" fill="#3b6a47"/><path d="M10 12 C8 11 6 11.5 5 13.5 C7 14.5 9 14 10 12 Z" fill="#7ea888"/><path d="M17.6 3.2 C18.4 2.3 19.8 2.5 20.3 3.5 C20.8 2.5 22.2 2.3 23 3.2 C23.9 4.3 22.9 5.9 20.3 7.6 C17.7 5.9 16.7 4.3 17.6 3.2 Z" fill="#ee8ca1" transform="translate(-3 1) scale(0.9)"/></svg></span>
+      <button class="theme-btn" id="theme-btn" aria-label="Switch theme">☾</button>
       <button class="add-btn" id="fab" aria-label="Adopt a plant">＋</button>
     </div>
     <div id="panel-extra"></div>
@@ -724,6 +737,29 @@
     ["rotate", "🔄 Rotate"],
   ];
   const CARE_ICONS = { watering: "💧", light: "☀️", humidity: "💨", feeding: "🌱", temperature: "🌡" };
+
+  // Theme: light is Floradora's default everywhere, regardless of the device
+  // setting; the header toggle switches to the warm-dark sibling and remembers.
+  const themeBtn = document.getElementById("theme-btn");
+  function applyTheme(mode) {
+    document.documentElement.dataset.theme = mode;
+    themeBtn.textContent = mode === "light" ? "☾" : "☀";
+    themeBtn.setAttribute("aria-label", mode === "light" ? "Switch to dark" : "Switch to light");
+    try { localStorage.setItem("floradoraTheme", mode); } catch {}
+  }
+  let storedTheme = "light";
+  try { storedTheme = localStorage.getItem("floradoraTheme") || "light"; } catch {}
+  applyTheme(storedTheme === "dark" ? "dark" : "light");
+  themeBtn.addEventListener("click", () =>
+    applyTheme(document.documentElement.dataset.theme === "light" ? "dark" : "light"));
+  // The artifact viewer may stamp its own theme after load; Floradora's choice wins.
+  new MutationObserver(() => {
+    let want = "light";
+    try { want = localStorage.getItem("floradoraTheme") || "light"; } catch {}
+    if (document.documentElement.dataset.theme !== want) {
+      document.documentElement.dataset.theme = want;
+    }
+  }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
 
   const root = document.getElementById("root");
   const fab = document.getElementById("fab");
