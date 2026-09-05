@@ -535,6 +535,16 @@
   .thumb-flag { position: absolute; bottom: -4px; right: -4px; width: 18px; height: 18px; border-radius: 50%; background: var(--sun); color: #fff; font-size: 11px; font-weight: 800; text-align: center; line-height: 18px; }
   .thumb-add { flex: 0 0 auto; width: 64px; height: 64px; border-radius: 12px; border: 2px dashed var(--coral); background: transparent; color: var(--coral); font-size: 28px; line-height: 1; cursor: pointer; font-family: inherit; }
   .thumb-add:focus-visible, .thumb:focus-visible, .thumb-x:focus-visible { outline: 2px solid var(--leaf); outline-offset: 2px; }
+  .talk { margin: 6px 0 10px; }
+  .talk-log { display: flex; flex-direction: column; gap: 6px; max-height: 260px; overflow-y: auto; padding: 2px 0; }
+  .msg { max-width: 82%; padding: 9px 12px; border-radius: 14px; font-size: 14px; line-height: 1.45; }
+  .msg.user { align-self: flex-end; background: var(--bubble-me); color: #fff; border-bottom-right-radius: 4px; }
+  .msg.assistant { align-self: flex-start; background: var(--card); border: 1px solid var(--line); color: var(--ink); border-bottom-left-radius: 4px; }
+  .msg.thinking { color: var(--ink-soft); font-style: italic; }
+  .talk-form { display: flex; gap: 8px; margin-top: 8px; }
+  .talk-form input { flex: 1; min-width: 0; border: 1px solid var(--line); border-radius: 999px; padding: 10px 14px; font: inherit; font-size: 14px; background: var(--card); color: var(--ink); }
+  .talk-form button { border: none; border-radius: 999px; background: var(--leaf); color: #fff; font: inherit; font-weight: 700; padding: 10px 16px; cursor: pointer; }
+  .talk-note { margin: 6px 0 0; }
   .shot-dots { display: flex; justify-content: center; gap: 8px; margin: 6px 0 12px; }
   .shot-dots span { width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--leaf); background: transparent; }
   .shot-dots span.on { background: var(--leaf); }
@@ -728,6 +738,7 @@
   // (the card tap is the user gesture), then replay from the button.
   const player = new Audio();
   let playingSlug = null;
+  let speakTimer = null; // the beat between opening a profile and the plant speaking
   player.addEventListener("ended", () => setSpeakUI(null));
   player.addEventListener("pause", () => setSpeakUI(null));
 
@@ -744,6 +755,8 @@
       btn.textContent = slug ? "◼" : "▶";
       btn.setAttribute("aria-label", slug ? "Stop" : "Hear the introduction");
     }
+    const cue = document.getElementById("speak-cue");
+    if (cue) cue.textContent = slug ? "speaking…" : "";
   }
 
   function speak(slug) {
@@ -816,7 +829,7 @@
     document.querySelector(".plants")?.scrollIntoView({ behavior: "smooth" });
   });
   document.getElementById("dock-learn").addEventListener("click", () => showToast("Learn is sprouting soon 🌱"));
-  document.getElementById("dock-chat").addEventListener("click", () => showToast("Chat lives in the Floradora app 💬"));
+  document.getElementById("dock-chat").addEventListener("click", () => showToast("Open a plant — you can talk to it under its introduction 💬"));
 
   // Plants adopted from this page live INSIDE the page: adopting republishes
   // the artifact with the entry baked into #extra-plants, so it persists for
@@ -999,6 +1012,7 @@
   }
 
   function adoptShell(inner) {
+    clearTimeout(speakTimer);
     currentSlug = null;
     fab.hidden = true;
     dock.hidden = true;
@@ -1304,6 +1318,72 @@ Respond with ONLY this JSON object: {"samePlant": true or false, "confidence": 0
   const speech = (s) =>
     esc(s).split(/\n{2,}/).map((p) => "<p>" + p.replace(/\*([^*]+)\*/g, "<em>$1</em>") + "</p>").join("");
 
+  // ——— Talk: a written conversation with the plant, right on its profile.
+  // The page asks Claude in character (sample capability); the thread stays
+  // on this device. Spoken replies are the app's.
+  const threads = {};
+  function threadFor(slug) {
+    if (!threads[slug]) {
+      try { threads[slug] = JSON.parse(localStorage.getItem("talk:" + slug) || "[]"); } catch { threads[slug] = []; }
+    }
+    return threads[slug];
+  }
+  function saveThread(slug) {
+    try { localStorage.setItem("talk:" + slug, JSON.stringify(threadFor(slug).slice(-40))); } catch {}
+  }
+  function personaFor(p) {
+    return [
+      `You are "${p.suggestedName}", a ${p.species.common} (${p.species.scientific}), a houseplant character in the Floradora greenhouse. Stay in character at all times.`,
+      p.personality ? `Your personality: ${p.personality}` : "",
+      p.phenotype && p.phenotype.length ? `Distinctive traits: ${p.phenotype.join("; ")}.` : "",
+      `Your current condition: ${TIER[p.condition.tier].label} (${p.condition.score}/100).`,
+      p.condition.findings && p.condition.findings.length ? `Today's reading of you: ${p.condition.findings.join(" ")}` : "",
+      p.careSheet ? `Your care rhythm: water about every ${p.careSheet.wateringIntervalDays} days (${p.careSheet.watering}) Light: ${p.careSheet.light}` : "",
+      "Rules: reply in 1-3 short sentences, warm, true to your condition; weave in real botanical facts about your species as things you remember from your homeland or your body; never guilt-trip your collector about your condition; no stage directions, asterisks, or emoji. Reply with just your next line.",
+    ].filter(Boolean).join("\n");
+  }
+  async function talk(slug, text) {
+    const p = PLANTS.find((x) => x.slug === slug);
+    const log = document.getElementById("talk-log");
+    const note = document.getElementById("talk-note");
+    if (!p || !log) return;
+    const th = threadFor(slug);
+    th.push({ role: "user", content: text });
+    saveThread(slug);
+    log.insertAdjacentHTML("beforeend", `<div class="msg user">${esc(text)}</div><div class="msg assistant thinking" id="talk-pending">…</div>`);
+    log.scrollTop = log.scrollHeight;
+    let sample = null;
+    try { sample = await window.claude?.use?.("sample"); } catch {}
+    const pending = document.getElementById("talk-pending");
+    if (!sample) {
+      if (pending) pending.remove();
+      th.pop(); saveThread(slug);
+      if (note) note.textContent = "This view can't talk — open the page inside Claude, or use the Floradora app.";
+      return;
+    }
+    const turns = [{ role: "user", content: personaFor(p) }, ...th.slice(-12).map((m) => ({ role: m.role, content: m.content }))];
+    try {
+      const res = await sample(turns, {
+        modelTier: "quick",
+        cache: false,
+        onText: ({ text: t }) => { if (pending) { pending.textContent = t; pending.classList.remove("thinking"); } },
+      });
+      const line = String(res.text || "").trim() || "…";
+      if (pending) { pending.textContent = line; pending.classList.remove("thinking"); pending.removeAttribute("id"); }
+      th.push({ role: "assistant", content: line });
+      saveThread(slug);
+      if (note) note.textContent = `Talk to ${p.suggestedName} here in writing; in the Floradora app the replies are spoken.`;
+    } catch (e) {
+      if (pending) pending.remove();
+      th.pop(); saveThread(slug);
+      const code = (e && e.code) || "error";
+      if (note) note.textContent = code === "not_granted"
+        ? "Talking needs your OK to ask Claude — send again and allow it."
+        : `${p.suggestedName} went quiet (${code}). Try again in a moment.`;
+    }
+    log.scrollTop = log.scrollHeight;
+  }
+
   // ——— Needs you: everything waiting for the collector, worked one at a time.
   const addressed = new Set(); // "slug+kind" marked done this session
   function attention() {
@@ -1325,6 +1405,7 @@ Respond with ONLY this JSON object: {"samePlant": true or false, "confidence": 0
   let profileFrom = null; // "needs" when a profile was opened from the list
 
   function showNeeds() {
+    clearTimeout(speakTimer);
     currentSlug = null;
     fab.hidden = true;
     dock.hidden = false;
@@ -1367,6 +1448,7 @@ Respond with ONLY this JSON object: {"samePlant": true or false, "confidence": 0
   }
 
   function showGreenhouse() {
+    clearTimeout(speakTimer);
     currentSlug = null;
     profileFrom = null;
     fab.hidden = false;
@@ -1481,9 +1563,19 @@ Respond with ONLY this JSON object: {"samePlant": true or false, "confidence": 0
           <span>Introduction</span>
           ${(AUDIO[p.slug] || p.audioData) ? `
           <button class="speak" id="speak-btn" aria-label="Hear the introduction">▶</button>
-          <span class="speaking-hint">${introSeen.get(p.slug) ? "" : "speaking…"}</span>` : ""}
+          <span class="speaking-hint" id="speak-cue"></span>` : ""}
         </div>
         <div class="bubble">${speech(p.firstWords)}</div>` : ""}
+
+        ${p.awaitingBotanist ? "" : `
+        <div class="talk" id="talk">
+          <div class="talk-log" id="talk-log">${threadFor(slug).map((m) => `<div class="msg ${m.role}">${esc(m.content)}</div>`).join("")}</div>
+          <form class="talk-form" id="talk-form" autocomplete="off">
+            <input id="talk-input" placeholder="Say something to ${esc(p.suggestedName)}…" maxlength="400" aria-label="Your message">
+            <button type="submit">Send</button>
+          </form>
+          <p class="muted-note talk-note" id="talk-note">Talk to ${esc(p.suggestedName)} here in writing; in the Floradora app the replies are spoken.</p>
+        </div>`}
 
         <div class="chips">
           ${CARE.map(([k, label]) => `<button class="chip" data-care="${k}">${label}</button>`).join("")}
@@ -1547,6 +1639,15 @@ Respond with ONLY this JSON object: {"samePlant": true or false, "confidence": 0
     root.querySelectorAll("[data-zoom]").forEach((b) =>
       b.addEventListener("click", () => openLightbox(b.dataset.zoom)));
     bindThumbStrip(slug, false);
+    const talkForm = document.getElementById("talk-form");
+    if (talkForm) talkForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const input = document.getElementById("talk-input");
+      const v = input.value.trim();
+      if (!v) return;
+      input.value = "";
+      talk(slug, v);
+    });
     const removeBtn = document.getElementById("remove-plant");
     if (removeBtn) removeBtn.addEventListener("click", async () => {
       if (!confirm(`Remove ${p.suggestedName} from the greenhouse?`)) return;
@@ -1580,7 +1681,13 @@ Respond with ONLY this JSON object: {"samePlant": true or false, "confidence": 0
       }));
     }
 
-    if (!introSeen.get(slug)) speak(slug);
+    // A beat after the profile opens, the plant speaks; then you can talk back.
+    clearTimeout(speakTimer);
+    if (AUDIO[slug] || p.audioData) {
+      const cue = document.getElementById("speak-cue");
+      if (cue) cue.textContent = `${p.suggestedName} is about to say hello…`;
+      speakTimer = setTimeout(() => { if (currentSlug === slug) speak(slug); }, 2800);
+    }
   }
 
   function logCare(slug, kind) {
