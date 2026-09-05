@@ -131,6 +131,17 @@
     box-shadow: var(--shadow);
   }
   .metric svg { width: 34px; height: 34px; display: block; margin-bottom: 8px; }
+  button.metric { font: inherit; text-align: left; cursor: pointer; }
+  button.metric.live { border-color: var(--coral); }
+  .metric span.hint { display: block; font-size: 11px; color: var(--coral); font-weight: 700; margin-top: 4px; }
+  .need-row { display: flex; gap: 12px; align-items: center; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 12px; margin-bottom: 10px; }
+  .need-row.done { opacity: 0.55; }
+  .need-row img { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; flex: 0 0 auto; background: var(--cream); }
+  .need-num { font-family: "JetBrains Mono", monospace; font-size: 12px; color: var(--ink-soft); width: 16px; flex: 0 0 auto; }
+  .need-copy { flex: 1; min-width: 0; }
+  .need-copy b { display: block; font-family: "Fraunces", Georgia, serif; font-weight: 600; font-size: 18px; color: var(--ink); }
+  .need-copy span { display: block; font-size: 13px; line-height: 1.4; color: var(--ink-soft); }
+  .need-actions { display: flex; flex-direction: column; gap: 6px; flex: 0 0 auto; }
   .metric b { display: block; font-family: "Fraunces", Georgia, serif; font-weight: 600; font-size: 30px; color: var(--ink); line-height: 1.1; }
   .metric span { font-size: 14px; color: var(--ink); }
 
@@ -524,7 +535,7 @@
   .thumb-flag { position: absolute; bottom: -4px; right: -4px; width: 18px; height: 18px; border-radius: 50%; background: var(--sun); color: #fff; font-size: 11px; font-weight: 800; text-align: center; line-height: 18px; }
   .thumb-add { flex: 0 0 auto; width: 64px; height: 64px; border-radius: 12px; border: 2px dashed var(--coral); background: transparent; color: var(--coral); font-size: 28px; line-height: 1; cursor: pointer; font-family: inherit; }
   .thumb-add:focus-visible, .thumb:focus-visible, .thumb-x:focus-visible { outline: 2px solid var(--leaf); outline-offset: 2px; }
-  .thumb-add-label { margin: 2px 0 8px; font-size: 12px; color: var(--ink-soft); text-align: right; }
+  .thumb-add-label { margin: 2px 0 8px; font-size: 12px; color: var(--ink-soft); text-align: center; }
   .plant-says { display: flex; gap: 10px; align-items: flex-start; background: var(--cream); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; margin: 4px 0 8px; }
   .plant-says img, .plant-says .face.small { width: 40px; height: 40px; border-radius: 50%; flex: 0 0 auto; object-fit: cover; }
   .plant-says .face.small { display: inline-flex; align-items: center; justify-content: center; font-size: 11px; color: #fff; }
@@ -1237,14 +1248,77 @@ Respond with ONLY this JSON object: {"samePlant": true or false, "confidence": 0
   const speech = (s) =>
     esc(s).split(/\n{2,}/).map((p) => "<p>" + p.replace(/\*([^*]+)\*/g, "<em>$1</em>") + "</p>").join("");
 
+  // ——— Needs you: everything waiting for the collector, worked one at a time.
+  const addressed = new Set(); // "slug+kind" marked done this session
+  function attention() {
+    const items = [];
+    for (const p of PLANTS) {
+      if (p.awaitingBotanist) {
+        items.push({ p, kind: "arrival", order: -1, why: "New arrival — waiting for the botanist's reading." });
+      } else if (p.condition.score < 70) {
+        const t = TIER[p.condition.tier];
+        items.push({ p, kind: "care", order: p.condition.score,
+          why: `${t.label} · ${p.condition.score}/100${p.condition.findings.length ? " — " + p.condition.findings[0] : ""}` });
+      }
+      if ((PHOTOS[p.slug] || []).some((ph) => ph.checked === false)) {
+        items.push({ p, kind: "photo", order: 50, why: "A new picture is waiting for the botanist's check." });
+      }
+    }
+    return items.sort((a, b) => a.order - b.order);
+  }
+  let profileFrom = null; // "needs" when a profile was opened from the list
+
+  function showNeeds() {
+    currentSlug = null;
+    fab.hidden = true;
+    dock.hidden = false;
+    panelExtra.innerHTML = "";
+    player.pause();
+    const items = attention();
+    const open = items.filter((it) => !addressed.has(it.p.slug + it.kind));
+    root.innerHTML = `
+      <div class="view">
+        <button class="back">← Greenhouse</button>
+        <h2 class="p-name">Needs you today</h2>
+        <p class="p-species">${
+          open.length ? `${open.length} of ${items.length} to go — take them one at a time.`
+          : items.length ? "All addressed for today ♥" : "Everyone is thriving ♥"}</p>
+        ${items.map((it, i) => {
+          const av = SPRITES[it.p.slug] || it.p.spriteData || imgSrc(it.p);
+          const done = addressed.has(it.p.slug + it.kind);
+          return `
+        <div class="need-row${done ? " done" : ""}">
+          <span class="need-num">${i + 1}</span>
+          <img src="${av}" alt="">
+          <span class="need-copy"><b>${esc(it.p.suggestedName)}</b><span>${esc(it.why)}</span></span>
+          <span class="need-actions">
+            <button class="chip" data-open="${it.p.slug}">Open</button>
+            <button class="chip" data-done="${it.p.slug + it.kind}">${done ? "Undo" : "Done"}</button>
+          </span>
+        </div>`;
+        }).join("")}
+      </div>`;
+    root.querySelector(".back").addEventListener("click", showGreenhouse);
+    root.querySelectorAll("[data-open]").forEach((b) =>
+      b.addEventListener("click", () => { profileFrom = "needs"; showProfile(b.dataset.open); }));
+    root.querySelectorAll("[data-done]").forEach((b) =>
+      b.addEventListener("click", () => {
+        const k = b.dataset.done;
+        if (addressed.has(k)) addressed.delete(k); else addressed.add(k);
+        showNeeds();
+      }));
+    window.scrollTo(0, 0);
+  }
+
   function showGreenhouse() {
     currentSlug = null;
+    profileFrom = null;
     fab.hidden = false;
     const hour = new Date().getHours();
     const greet = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
     const day = new Date().toLocaleDateString(undefined, { weekday: "long" });
     const thriving = PLANTS.filter((p) => p.condition.score >= 70).length;
-    const needs = PLANTS.filter((p) => p.condition.score < 70);
+    const att = attention();
     dock.hidden = false;
     panelExtra.innerHTML = `
       <div class="eyebrow">${day} · your greenhouse</div>
@@ -1255,23 +1329,25 @@ Respond with ONLY this JSON object: {"samePlant": true or false, "confidence": 0
       <div class="metrics">
         <div class="metric">${ICONS.sprout}<b>${PLANTS.length}</b><span>plants growing</span></div>
         <div class="metric">${ICONS.leaf}<b>${thriving}</b><span>thriving</span></div>
-        <div class="metric">${ICONS.heart}<b>${needs.length}</b><span>need you today</span></div>
+        <button class="metric${att.length ? " live" : ""}" id="needs-btn" aria-label="${att.length} need you today — open the list">${ICONS.heart}<b>${att.length}</b><span>need you today</span>${att.length ? `<span class="hint">tap to see who →</span>` : ""}</button>
       </div>`;
+    document.getElementById("needs-btn").addEventListener("click", showNeeds);
     root.innerHTML = `
       <div class="view">
-        ${needs.length ? `
+        ${att.length ? `
         <details class="agenda">
           <summary>
             <span class="kicker">Start here</span>
             <span class="agenda-title">Today in the greenhouse</span>
-            <span class="pill">${needs.length} waiting</span>
+            <span class="pill">${att.length} waiting</span>
           </summary>
           <div class="agenda-list">
-            ${needs.map((p) => `
-            <button class="todo" data-slug="${p.slug}">
+            ${att.map((it) => `
+            <button class="todo" data-slug="${it.p.slug}">
               <span class="dot"></span>
-              <span class="todo-copy"><b>${esc(p.suggestedName)} could use some attention.</b>
-              <span>${TIER[p.condition.tier].label} · ${p.condition.score}/100 — tap to visit.</span></span>
+              <span class="todo-copy"><b>${esc(it.p.suggestedName)} ${
+                it.kind === "care" ? "could use some attention." : it.kind === "arrival" ? "is waiting for the botanist." : "has a new picture to check."}</b>
+              <span>${esc(it.why)} — tap to visit.</span></span>
               <span class="pill">Visit</span>
             </button>`).join("")}
           </div>
@@ -1311,7 +1387,7 @@ Respond with ONLY this JSON object: {"samePlant": true or false, "confidence": 0
     root.innerHTML = `
       <div class="view">
         <div class="profile-topnav">
-          <button class="back">← Greenhouse</button>
+          <button class="back">${profileFrom === "needs" ? "← Needs you" : "← Greenhouse"}</button>
           <span class="spacer"></span>
           <button class="nav-btn" id="nav-prev" aria-label="Previous plant">‹</button>
           <button class="nav-btn" id="nav-next" aria-label="Next plant">›</button>
@@ -1401,7 +1477,7 @@ Respond with ONLY this JSON object: {"samePlant": true or false, "confidence": 0
           <button class="back" id="remove-plant" style="color: var(--bloom)">Remove from greenhouse</button>
         </p>` : ""}
       </div>`;
-    root.querySelector(".back").addEventListener("click", () => { player.pause(); showGreenhouse(); });
+    root.querySelector(".back").addEventListener("click", () => { player.pause(); if (profileFrom === "needs") showNeeds(); else showGreenhouse(); });
     document.getElementById("nav-prev").addEventListener("click", () => slideDir(-1));
     document.getElementById("nav-next").addEventListener("click", () => slideDir(1));
     document.getElementById("edit-name").addEventListener("click", () => startRename(slug));
