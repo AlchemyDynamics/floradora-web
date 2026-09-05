@@ -1359,7 +1359,7 @@ Respond with ONLY this JSON object: {"samePlant": true or false, "confidence": 0
       ...speciesLinesFor(p.speciesInfo),
       ...(() => { const said = threadFor(p.slug).filter((m) => m.role === "assistant").slice(-15).map((m) => m.content); return said.length ? [`Lines you've already said to this collector — never repeat them or their ideas:\n${said.map((t) => "- " + t).join("\n")}`] : []; })(),
       p.firstWords ? `You already introduced yourself with: "${p.firstWords.replace(/\*[^*]+\*/g, " ").replace(/\s+/g, " ").trim()}" — never repeat or paraphrase it, and don't lean on a signature phrase.` : "",
-      "Rules: reply in 1-3 short sentences, warm, true to your condition. You know your care sheet and your species notes: talk about the care you actually need (what to check, when, what the signs look like) and about your kind when it fits. Never guilt-trip your collector about your condition. Be original: never repeat a sentence or pet phrase you've already used, and bring one new, specific detail each reply (a care need, a fact from your notes, or something you notice today). No stage directions, asterisks, or emoji. Reply with just your next line.",
+      "Rules: reply in at most two sentences and at most 35 words in total; one sentence is often enough. Trim adjectives, asides, dashes, and restated feelings first. Warm, true to your condition. You know your care sheet and your species notes: talk about the care you actually need (what to check, when, what the signs look like) and about your kind when it fits. Never guilt-trip your collector about your condition. Be original: never repeat a sentence or pet phrase you've already used, and bring one new, specific detail each reply (a care need, a fact from your notes, or something you notice today). No stage directions, asterisks, or emoji. Reply with just your next line.",
     ].filter(Boolean).join("\n");
   }
   // Voice on the page: the browser's own speech engine reads the plant's
@@ -1488,6 +1488,7 @@ Respond with ONLY this JSON object: {"samePlant": true or false, "confidence": 0
       return;
     }
     const turns = [{ role: "user", content: personaFor(p) }, ...th.slice(-12).map((m) => ({ role: m.role, content: m.content }))];
+    turns[turns.length - 1] = { ...turns[turns.length - 1], content: turns[turns.length - 1].content + "\n\n[Reply in at most 35 words — one or two sentences.]" };
     try {
       const res = await sample(turns, {
         modelTier: "quick",
