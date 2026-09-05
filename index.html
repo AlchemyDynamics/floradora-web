@@ -562,6 +562,8 @@
     box-shadow: var(--shadow);
     overflow: hidden;
   }
+  .sum-species { font-weight: 400; color: var(--ink-soft); font-size: 0.92em; }
+  .sum-species em { font-style: italic; }
   .section summary {
     font-family: "JetBrains Mono", monospace;
     font-size: 11px;
@@ -1188,7 +1190,7 @@
 
         ${cs ? `
         <details class="section">
-          <summary>Care sheet</summary>
+          <summary>Care sheet <span class="sum-species">· ${esc(p.species.common)} <em>${esc(p.species.scientific)}</em></span></summary>
           <div class="sec-body">
           ${Object.entries(CARE_ICONS).map(([k, ico]) =>
             `<div class="care-row"><span class="ico">${ico}</span><span>${esc(cs[k])}</span></div>`).join("")}
