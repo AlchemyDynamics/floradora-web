@@ -1354,7 +1354,16 @@ Respond with ONLY this JSON object: {"samePlant": true or false, "confidence": 0
   // the real cast voice lives in the app) and, where the browser allows a
   // microphone, takes yours.
   const CAN_SPEAK = "speechSynthesis" in window;
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+  const MIC_ALLOWED = (() => {
+    try {
+      const pol = document.permissionsPolicy || document.featurePolicy;
+      if (pol && typeof pol.allowsFeature === "function") return pol.allowsFeature("microphone");
+    } catch {}
+    return null; // unknown: show the mic and report what happens
+  })();
+  const SR = MIC_ALLOWED === false ? null : (window.SpeechRecognition || window.webkitSpeechRecognition || null);
+  const MIC_BLOCKED_NOTE = (name) =>
+    `This viewer doesn't let the page use the microphone, so speaking to ${name} isn't possible here — type instead; ${name} still answers aloud. Talking out loud is the Floradora app's.`;
   if (CAN_SPEAK) { try { speechSynthesis.getVoices(); speechSynthesis.addEventListener("voiceschanged", () => speechSynthesis.getVoices()); } catch {} }
   const talkVoice = {
     get: () => { try { return localStorage.getItem("talkVoice") !== "off"; } catch { return true; } },
@@ -1406,27 +1415,43 @@ Respond with ONLY this JSON object: {"samePlant": true or false, "confidence": 0
     if (!input || !mic) return;
     try { speechSynthesis.cancel(); } catch {}
     player.pause();
-    const rec = new SR();
+    const note = document.getElementById("talk-note");
+    const p = PLANTS.find((x) => x.slug === slug);
+    const name = p ? p.suggestedName : "the plant";
+    const placeholder = input.placeholder;
+    const micFailed = (why) => {
+      mic.classList.remove("listening");
+      input.placeholder = placeholder;
+      const blocked = /not-allowed|service-not-allowed|audio-capture|security|denied/i.test(why || "");
+      if (note) note.textContent = blocked ? MIC_BLOCKED_NOTE(name) : `The microphone didn't start (${why || "unknown"}). Type instead — ${name} still answers aloud.`;
+      if (blocked) mic.hidden = true; // no point offering it again in this viewer
+    };
+    let rec;
+    try { rec = new SR(); } catch (e) { micFailed(String(e && e.message)); return; }
     rec.lang = "en-US";
     rec.interimResults = true;
     rec.maxAlternatives = 1;
     mic.classList.add("listening");
     mic.setAttribute("aria-label", "Listening… tap to stop");
-    let finished = false;
+    input.placeholder = `Listening… speak to ${name}`;
+    let gotSpeech = false;
     rec.onresult = (e) => {
+      gotSpeech = true;
       const t = Array.from(e.results).map((r) => r[0].transcript).join(" ").trim();
       input.value = t;
-      if (e.results[e.results.length - 1].isFinal) { finished = true; rec.stop(); }
+      if (e.results[e.results.length - 1].isFinal) rec.stop();
     };
-    rec.onerror = () => { mic.classList.remove("listening"); mic.setAttribute("aria-label", "Speak to the plant"); };
+    rec.onerror = (e) => micFailed(e && e.error);
     rec.onend = () => {
       mic.classList.remove("listening");
       mic.setAttribute("aria-label", "Speak to the plant");
+      input.placeholder = placeholder;
       const v = input.value.trim();
       if (v) { input.value = ""; talk(slug, v); }
+      else if (!gotSpeech && note && !mic.hidden && !/microphone/i.test(note.textContent)) note.textContent = `Didn't catch that — tap the mic and speak, or type to ${name}.`;
     };
-    mic.onclick = () => { if (mic.classList.contains("listening")) { finished = true; rec.stop(); } else startListening(slug); };
-    try { rec.start(); } catch { mic.classList.remove("listening"); }
+    mic.onclick = () => { if (mic.classList.contains("listening")) rec.stop(); else startListening(slug); };
+    try { rec.start(); } catch (e) { micFailed(String((e && (e.name || e.message)) || "start failed")); }
   }
 
   async function talk(slug, text) {
