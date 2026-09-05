@@ -535,6 +535,9 @@
   .thumb-flag { position: absolute; bottom: -4px; right: -4px; width: 18px; height: 18px; border-radius: 50%; background: var(--sun); color: #fff; font-size: 11px; font-weight: 800; text-align: center; line-height: 18px; }
   .thumb-add { flex: 0 0 auto; width: 64px; height: 64px; border-radius: 12px; border: 2px dashed var(--coral); background: transparent; color: var(--coral); font-size: 28px; line-height: 1; cursor: pointer; font-family: inherit; }
   .thumb-add:focus-visible, .thumb:focus-visible, .thumb-x:focus-visible { outline: 2px solid var(--leaf); outline-offset: 2px; }
+  .shot-dots { display: flex; justify-content: center; gap: 8px; margin: 6px 0 12px; }
+  .shot-dots span { width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--leaf); background: transparent; }
+  .shot-dots span.on { background: var(--leaf); }
   .thumb-add-label { margin: 2px 0 8px; font-size: 12px; color: var(--ink-soft); text-align: center; }
   .plant-says { display: flex; gap: 10px; align-items: flex-start; background: var(--cream); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; margin: 4px 0 8px; }
   .plant-says img, .plant-says .face.small { width: 40px; height: 40px; border-radius: 50%; flex: 0 0 auto; object-fit: cover; }
@@ -964,7 +967,6 @@
   // page republishes itself with the new plant baked in.
   const camInput = document.getElementById("cam-input");
   const libInput = document.getElementById("lib-input");
-  let adoptPhoto = null; // { dataUri, fromCamera }
 
   camInput.addEventListener("change", () => handleFile(camInput, true));
   libInput.addEventListener("change", () => handleFile(libInput, false));
@@ -990,8 +992,8 @@
         handleUpdatePhoto(s, dataUri);
         return;
       }
-      adoptPhoto = { dataUri, fromCamera };
-      renderAdoptConfirm();
+      adoptShots.push(dataUri);
+      if (adoptShots.length >= ANGLES.length) renderAdoptName(); else renderAdoptStep();
     };
     img.src = url;
   }
@@ -1009,81 +1011,134 @@
     window.scrollTo(0, 0);
   }
 
+  // Adoption asks for THREE angles so the species ID is trustworthy: the
+  // whole plant (the portrait), a leaf up close, and stem/soil/pot. The
+  // portrait alone is enough to proceed; every extra angle raises confidence.
+  const ANGLES = [
+    { title: "The whole plant", hint: "Step back: the pot, the leaves, where it lives. This becomes the portrait." },
+    { title: "A leaf up close", hint: "Fill the frame with one leaf, top side, in good light." },
+    { title: "Stem, soil and pot", hint: "Where the stems meet the soil, and the pot." },
+  ];
+  let adoptShots = []; // dataUris in ANGLES order
+
   function showAdopt() {
     updateSlug = null;
+    adoptShots = [];
+    renderAdoptStep();
+  }
+
+  function renderAdoptStep() {
+    const n = adoptShots.length;
+    const next = ANGLES[n];
     adoptShell(`
+      <p class="greenhouse-note" style="padding-top:0; text-align:center">Three angles make a confident ID.
+      One is enough to start; each extra one helps.</p>
+      <div class="shot-dots" aria-label="${n} of 3 photos">${ANGLES.map((_, i) => `<span class="${i < n ? "on" : ""}"></span>`).join("")}</div>
+      ${n ? `<div class="thumb-strip" style="justify-content:center">${adoptShots.map((d, i) => `
+        <span class="thumb-wrap">
+          <button class="thumb${i === 0 ? " portrait" : ""}" data-zoom="${d}" aria-label="${ANGLES[i].title}, see larger"><img src="${d}" alt=""></button>
+          <button class="thumb-x" data-shot="${i}" aria-label="Remove this photo">✕</button>
+        </span>`).join("")}</div>` : ""}
+      ${next ? `
       <button class="adopt-box" id="open-pick" style="width:100%; cursor:pointer; font:inherit">
-        <span class="cam">📷</span>Add a photo — take one or pick from your library.
+        <span class="cam">📷</span><b>Photo ${n + 1} of 3 · ${next.title}</b><br>${next.hint}
       </button>
       <div class="chips">
         <button class="chip" id="open-cam">Open camera directly</button>
-      </div>
-      <ol class="adopt-steps" style="margin-top:16px">
-        <li>Photograph your plant right where it lives.</li>
-        <li>It joins the greenhouse as a new arrival, saved into this page.</li>
-        <li>The botanist's full reading — species, care sheet, painted character,
-        voice — happens in the FlorAdora app.</li>
-      </ol>
+        ${n ? `<button class="chip" id="skip-shots">${n === 1 ? "Continue with one photo" : "Continue with two"}</button>` : ""}
+      </div>` : `
+      <div class="chips"><button class="chip" id="skip-shots" style="background:var(--leaf); color:#fff">All three — continue</button></div>`}
+      ${!n ? `
       <p class="muted-note">If the direct camera opens black inside the Claude app,
-      use the big button above — it opens the system photo sheet, which includes
+      use the big button — it opens the system photo sheet, which includes
       "Take Photo". (Direct camera also needs Camera enabled for Claude in your
-      phone's Settings.)</p>`);
-    document.getElementById("open-pick").addEventListener("click", () => libInput.click());
-    document.getElementById("open-cam").addEventListener("click", () => camInput.click());
-  }
-
-  function renderAdoptConfirm() {
-    adoptShell(`
-      <p class="greenhouse-note" style="padding-top:0">Happy with this shot?</p>
-      <img src="${adoptPhoto.dataUri}" alt="Your new plant"
-        style="width:100%; border-radius:14px; border:1px solid var(--line)">
-      <div class="rename-row" style="margin-top:14px">
-        <button id="use-photo">Use this photo</button>
-        <button id="retake-photo" class="ghost">${adoptPhoto.fromCamera ? "Retake" : "Choose another"}</button>
-        <button id="cancel-photo" class="ghost">Cancel</button>
-      </div>`);
-    document.getElementById("use-photo").addEventListener("click", renderAdoptName);
-    document.getElementById("retake-photo").addEventListener("click", () =>
-      (adoptPhoto.fromCamera ? camInput : libInput).click());
-    document.getElementById("cancel-photo").addEventListener("click", () => { adoptPhoto = null; showAdopt(); });
+      phone's Settings.)</p>` : ""}`);
+    const pick = document.getElementById("open-pick");
+    if (pick) pick.addEventListener("click", () => libInput.click());
+    const cam = document.getElementById("open-cam");
+    if (cam) cam.addEventListener("click", () => camInput.click());
+    const skip = document.getElementById("skip-shots");
+    if (skip) skip.addEventListener("click", renderAdoptName);
+    root.querySelectorAll("[data-zoom]").forEach((b) => b.addEventListener("click", () => openLightbox(b.dataset.zoom)));
+    root.querySelectorAll("[data-shot]").forEach((b) => b.addEventListener("click", () => {
+      adoptShots.splice(Number(b.dataset.shot), 1);
+      renderAdoptStep();
+    }));
   }
 
   function renderAdoptName() {
+    if (!adoptShots.length) return renderAdoptStep();
     adoptShell(`
-      <img src="${adoptPhoto.dataUri}" alt=""
-        style="width:120px; height:120px; object-fit:cover; border-radius:14px; border:1px solid var(--line); display:block; margin:0 auto 12px">
-      <p class="greenhouse-note" style="text-align:center; padding-top:0">What shall we call this one for now?</p>
+      <div class="thumb-strip" style="justify-content:center">${adoptShots.map((d, i) => `
+        <button class="thumb${i === 0 ? " portrait" : ""}" data-zoom="${d}" aria-label="${ANGLES[i].title}"><img src="${d}" alt=""></button>`).join("")}</div>
+      <p class="greenhouse-note" style="text-align:center; padding-top:0">Does it already have a name? Leave it and the botanist will suggest one.</p>
       <div class="rename-row">
         <input id="new-name" value="New Sprout" maxlength="24" aria-label="Plant name">
         <button id="save-plant">Add to greenhouse</button>
-      </div>`);
+      </div>
+      <div class="chips"><button class="chip" id="more-shots">← Add another angle</button></div>`);
     const input = document.getElementById("new-name");
     input.focus(); input.select();
     const commit = () => finalizeAdopt(input.value.trim() || "New Sprout");
     document.getElementById("save-plant").addEventListener("click", commit);
     input.addEventListener("keydown", (e) => { if (e.key === "Enter") commit(); });
+    document.getElementById("more-shots").addEventListener("click", renderAdoptStep);
+    root.querySelectorAll("[data-zoom]").forEach((b) => b.addEventListener("click", () => openLightbox(b.dataset.zoom)));
+  }
+
+  // First read on the page itself: species + confidence from all the angles
+  // (the full reading — care sheet, character, voice — is the botanist's).
+  async function guessSpecies(shots) {
+    let sample = null;
+    try { sample = await window.claude?.use?.("sample"); } catch {}
+    if (!sample) return null;
+    let caps = null;
+    try { caps = await sample.limits(); } catch {}
+    if (!caps || !caps.images) return null;
+    const angles = shots.map((_, i) => `${i + 1}: ${ANGLES[i] ? ANGLES[i].title.toLowerCase() : "another angle"}`).join(", ");
+    const prompt = `These ${shots.length} photo${shots.length > 1 ? "s" : ""} show the SAME houseplant (${angles}). Identify the species as precisely as the photos allow — weigh all angles together; agreement between angles raises confidence.
+Respond with ONLY this JSON object: {"scientific": "Genus species", "common": "common name", "confidence": 0 to 1, "clues": ["2 to 4 short visible features the identification rests on"], "wantMore": "if confidence is under 0.8, the ONE extra angle or detail that would settle it, else null"}`;
+    return sample.json(prompt, { images: shots.map(dataUriToBlob), modelTier: "default", cache: false });
   }
 
   async function finalizeAdopt(name) {
+    const shots = adoptShots.slice();
+    adoptShots = [];
     const entry = {
       slug: "adopted-" + Date.now().toString(36),
       suggestedName: name,
       species: { scientific: "To be identified", common: "New arrival", confidence: 0 },
       phenotype: [],
-      personality: "Just arrived on the shelf. The botanist hasn't read this one yet — adopt it in the FlorAdora app for the full profile, care sheet, painted character, and voice.",
+      personality: "Just arrived on the shelf. The botanist hasn't read this one yet — the full profile, care sheet, painted character, and voice come with the botanist's visit.",
       careSheet: null,
       condition: { score: 55, tier: "okay", findings: [] },
       firstWords: "",
-      photoData: adoptPhoto.dataUri,
+      photoData: shots[0],
+      angles: shots.length,
       awaitingBotanist: true,
     };
-    adoptPhoto = null;
+    root.innerHTML = `<div class="view"><p class="greenhouse-note" style="text-align:center">
+      Reading the leaves of ${esc(entry.suggestedName)}…</p></div>`;
+    try {
+      const g = await guessSpecies(shots);
+      if (g && g.scientific) {
+        entry.species = { scientific: String(g.scientific), common: String(g.common || g.scientific), confidence: Math.max(0, Math.min(1, Number(g.confidence) || 0)) };
+        if (Array.isArray(g.clues)) entry.phenotype = g.clues.map(String).slice(0, 4);
+        if (g.wantMore) entry.wantMore = String(g.wantMore);
+      }
+    } catch (e) {
+      console.warn("species guess failed", e);
+    }
     EXTRA.push(entry);
     PLANTS.push(entry);
+    // The other angles join the plant's pictures (checked: they came with it).
+    if (shots.length > 1) PHOTOS[entry.slug] = shots.slice(1).map((data, i) => ({ data, ts: Date.now(), checked: true, angle: ANGLES[i + 1] ? ANGLES[i + 1].title : "another angle" }));
     root.innerHTML = `<div class="view"><p class="greenhouse-note" style="text-align:center">
       Planting ${esc(entry.suggestedName)} in the greenhouse…</p></div>`;
+    try { sessionStorage.setItem("floradoraReturnTo", entry.slug); } catch {}
     const res = await persistExtras();
-    if (res === "published" || res === "conflict") return; // the view reloads
+    if (res === "published" || res === "conflict") return; // the view reloads onto the profile
+    try { sessionStorage.removeItem("floradoraReturnTo"); } catch {}
     // This view can't write the page — keep the plant on this device instead.
     EXTRA.pop();
     entry.local = true;
@@ -1091,8 +1146,9 @@
       const cur = JSON.parse(localStorage.getItem("extraPlantsLocal") || "[]");
       cur.push(entry);
       localStorage.setItem("extraPlantsLocal", JSON.stringify(cur));
+      localStorage.setItem("photoLogLocal", JSON.stringify(PHOTOS));
     } catch {}
-    showGreenhouse();
+    showProfile(entry.slug);
   }
 
   async function persistExtras() {
@@ -1414,8 +1470,11 @@ Respond with ONLY this JSON object: {"samePlant": true or false, "confidence": 0
 
         ${p.awaitingBotanist ? `
         <div class="bubble" style="border-left: 3px solid var(--sun)">🌱 A new arrival,
-        catalogued from this page. The botanist visits between sessions — species,
-        care sheet, painted character, and first words will appear here.</div>` : ""}
+        catalogued from this page${p.angles > 1 ? ` from ${p.angles} angles` : ""}.${
+          p.species.confidence ? ` First read: ${esc(p.species.common)} at ${Math.round(p.species.confidence * 100)}% confidence.` : ""}${
+          p.wantMore ? ` To settle it, add a picture of: ${esc(p.wantMore)}.` : ""}
+        The botanist visits between sessions — care sheet, painted character, and
+        first words will appear here.</div>` : ""}
 
         ${p.firstWords ? `
         <div class="bubble-label">
