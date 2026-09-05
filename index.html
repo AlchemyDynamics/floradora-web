@@ -1176,7 +1176,7 @@
 
         ${p.firstWords ? `
         <div class="bubble-label">
-          <span>First words</span>
+          <span>Introduction</span>
           ${(AUDIO[p.slug] || p.audioData) ? `
           <button class="speak" id="speak-btn" aria-label="Hear the introduction">▶</button>
           <span class="speaking-hint">${introSeen.get(p.slug) ? "" : "speaking…"}</span>` : ""}
@@ -1198,16 +1198,16 @@
           </div>
         </details>` : ""}
 
-        <details class="section">
-          <summary>Personality</summary>
-          <div class="sec-body"><p>${esc(p.personality)}</p></div>
-        </details>
-
         ${p.phenotype.length ? `
         <details class="section">
           <summary>Field notes · what makes this one yours</summary>
           <div class="sec-body"><ul>${p.phenotype.map((f) => `<li>${esc(f)}</li>`).join("")}</ul></div>
         </details>` : ""}
+
+        <details class="section">
+          <summary>Personality</summary>
+          <div class="sec-body"><p>${esc(p.personality)}</p></div>
+        </details>
 
         ${p.condition.findings.length ? `
         <details class="section">
